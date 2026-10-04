@@ -1,0 +1,61 @@
+name: Publicar no Canal EduCashPro
+
+on:
+  schedule:
+    # 08:05 em America/Belem / Brasília (UTC-3)
+    - cron: "5 11 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Data YYYY-MM-DD para teste/publicação manual (vazio = hoje)"
+        required: false
+        type: string
+      dry_run:
+        description: "Somente visualizar; não publicar"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: educashpro-channel-daily
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Publicar mensagem do dia
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          TIME_ZONE: America/Belem
+          FORCE_DATE: ${{ github.event.inputs.date || '' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+        run: node scripts/publish.js
+
+      - name: Registrar publicação
+        if: github.event_name == 'schedule' || github.event.inputs.dry_run == 'false'
+        run: |
+          if git diff --quiet -- published.json; then
+            echo "Nenhuma alteração de estado."
+            exit 0
+          fi
+          git config user.name "educashpro-channel-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add published.json
+          git commit -m "chore: registrar publicação automática"
+          git push
