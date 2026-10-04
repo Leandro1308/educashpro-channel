@@ -9,8 +9,9 @@ Publicador independente e sem servidor para o Canal Oficial do EduCashPro.
 - GitHub Actions executa diariamente às 08:05 no fuso America/Belem (UTC-3).
 - A publicação é enviada diretamente pela Telegram Bot API.
 - Não usa Render, MongoDB, Redis nem API da OpenAI.
-- `published.json` registra as mensagens já enviadas para reduzir risco de duplicação.
-- Os textos são originais e foram elaborados a partir de princípios gerais dos livros de educação financeira fornecidos pelo responsável do projeto. Nenhum PDF ou trecho integral dos livros é armazenado neste repositório.
+- `published.json` registra as mensagens já enviadas para evitar republicação.
+- O script valida automaticamente que existem exatamente 90 posts, sem IDs ou datas duplicadas.
+- Os textos são originais e foram elaborados a partir de princípios gerais dos livros fornecidos pelo responsável do projeto. Nenhum PDF ou trecho integral das obras é armazenado aqui.
 
 ## Secrets necessários
 
@@ -24,19 +25,24 @@ O token nunca deve ser colocado em arquivo público.
 ## Publicação
 
 O workflow `.github/workflows/publish.yml` roda automaticamente uma vez ao dia.
-Também pode ser executado manualmente com `dry_run=true` para pré-visualizar uma data sem publicar.
+Também pode ser executado manualmente pela aba **Actions**, com `dry_run=true`, para pré-visualizar uma data sem publicar.
 
 ## Conteúdo
 
-Os posts ficam em:
+As 90 mensagens ficam compactadas nos arquivos:
 
-- `posts/2026-10.json`
-- `posts/2026-11.json`
-- `posts/2026-12.json`
-- `posts/2027-01.json`
+- `posts/posts90.part1.b64`
+- `posts/posts90.part2.b64`
+- `posts/posts90.part3.b64`
+- `posts/posts90.part4.b64`
 
-Cada post tem ID único, data, texto, botão opcional e referência editorial interna da obra-base.
+O script recompõe e valida o conjunto antes de cada execução.
+
+## Período
+
+Primeiro post automático: **04/10/2026**  
+Último post da sequência: **01/01/2027**
 
 ## Custos
 
-A arquitetura não mantém servidor ligado. Em repositório público, o workflow usa runner padrão do GitHub Actions; a Telegram Bot API não cobra pelo envio dessas mensagens.
+A arquitetura não mantém servidor ligado. O repositório é público, o workflow usa runner padrão do GitHub Actions e a Telegram Bot API não cobra pelo envio das mensagens.
