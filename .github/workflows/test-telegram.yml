@@ -1,0 +1,50 @@
+name: Testar conexão Telegram
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/test-telegram.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Validar secrets e conexão sem publicar
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN não configurado"
+            exit 1
+          fi
+
+          if [ -z "$TELEGRAM_CHANNEL_ID" ]; then
+            echo "::error::TELEGRAM_CHANNEL_ID não configurado"
+            exit 1
+          fi
+
+          BOT_RESPONSE="$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe")"
+          echo "$BOT_RESPONSE" | grep -q '"ok":true' || {
+            echo "::error::Token do bot inválido"
+            exit 1
+          }
+
+          CHAT_RESPONSE="$(curl -fsS --get             --data-urlencode "chat_id=${TELEGRAM_CHANNEL_ID}"             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat")"
+          echo "$CHAT_RESPONSE" | grep -q '"ok":true' || {
+            echo "::error::Canal não encontrado ou bot sem acesso"
+            exit 1
+          }
+
+          echo "✅ Token válido."
+          echo "✅ Canal acessível pelo bot."
+          echo "✅ Nenhuma mensagem foi enviada."
