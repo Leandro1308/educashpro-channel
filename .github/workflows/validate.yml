@@ -1,0 +1,29 @@
+name: Validar Publicador EduCashPro
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validar os 90 posts sem publicar
+        env:
+          TIME_ZONE: America/Belem
+          FORCE_DATE: "2026-10-04"
+          DRY_RUN: "true"
+        run: node scripts/publish.js
