@@ -5,7 +5,7 @@ import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const POSTS_FILE = path.join(ROOT, "posts", "posts90.json.gz.b64");
+const POSTS_DIR = path.join(ROOT, "posts");
 const PUBLISHED_FILE = path.join(ROOT, "published.json");
 const TIME_ZONE = process.env.TIME_ZONE || "America/Belem";
 
@@ -21,11 +21,38 @@ function localDateISO(date = new Date()) {
 }
 
 function readAllPosts() {
-  const encoded = fs.readFileSync(POSTS_FILE, "utf8").trim();
+  const partFiles = fs.readdirSync(POSTS_DIR)
+    .filter((name) => /^posts90\.part\d+\.b64$/.test(name))
+    .sort((a, b) => {
+      const na = Number(a.match(/part(\d+)/)?.[1] || 0);
+      const nb = Number(b.match(/part(\d+)/)?.[1] || 0);
+      return na - nb;
+    });
+
+  if (!partFiles.length) throw new Error("Nenhum arquivo de publicações encontrado");
+
+  const encoded = partFiles
+    .map((name) => fs.readFileSync(path.join(POSTS_DIR, name), "utf8").trim())
+    .join("");
+
   const compressed = Buffer.from(encoded, "base64");
   const json = zlib.gunzipSync(compressed).toString("utf8");
   const posts = JSON.parse(json);
+
   if (!Array.isArray(posts)) throw new Error("Arquivo de publicações inválido");
+  if (posts.length !== 90) throw new Error(`Esperadas 90 publicações, encontradas ${posts.length}`);
+
+  const ids = new Set();
+  const dates = new Set();
+  for (const post of posts) {
+    if (!post?.id || !post?.date || !post?.text) throw new Error("Publicação incompleta");
+    if (ids.has(post.id)) throw new Error(`ID duplicado: ${post.id}`);
+    if (dates.has(post.date)) throw new Error(`Data duplicada: ${post.date}`);
+    if (String(post.text).length > 4096) throw new Error(`Mensagem excede 4096 caracteres: ${post.id}`);
+    ids.add(post.id);
+    dates.add(post.date);
+  }
+
   return posts;
 }
 
